@@ -4,8 +4,8 @@ const https = require('https');
 
 // TLS certificates
 const options = {
-  key: fs.readFileSync('/home/arthur/certs/dweb.arthuredelstein.net/privkey.pem'),
-  cert: fs.readFileSync('/home/arthur/certs/dweb.arthuredelstein.net/cert.pem')
+  key: fs.readFileSync('/home/arthur/certs/arthuredelstein.net/privkey.pem'),
+  cert: fs.readFileSync('/home/arthur/certs/arthuredelstein.net/cert.pem')
 };
 
 // Run proxy server
