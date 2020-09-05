@@ -1,0 +1,27 @@
+{
+
+  "manifest_version": 2,
+  "name": "proxy-dweb",
+  "description": "Connects to a proxy to load dweb protocols",
+  "version": "0.1",
+
+  "icons": {
+    "48": "icon.svg",
+    "96": "icon.svg"
+  },
+
+  "browser_specific_settings": {
+    "gecko": {
+      "strict_min_version": "78.0"
+    }
+  },
+
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+
+  "permissions": ["proxy", "webNavigation", "webRequest", "webRequestBlocking", "<all_urls>"]
+
+}
