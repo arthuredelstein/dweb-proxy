@@ -5,7 +5,7 @@ console.log("Loading dweb-proxy");
 browser.proxy.onRequest.addListener((requestInfo) => {
   const url = new URL(requestInfo.url);
   if (url.hostname.endsWith(".ipfs")) {
-    let proxyInfo = [{type: "https", host: "dweb.arthuredelstein.net", port: 8500 }];
+    let proxyInfo = [{type: "https", host: "arthuredelstein.net", port: 8500 }];
     return proxyInfo;
   } else {
     return [{type: "direct"}];
