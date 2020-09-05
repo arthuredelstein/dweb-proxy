@@ -1,5 +1,6 @@
 console.log("Loading dweb-proxy");
 
+
 // Proxy all dweb (.ipfs) requests via
 // https://dweb.arthuredelstein.net:8500
 browser.proxy.onRequest.addListener((requestInfo) => {
@@ -22,8 +23,14 @@ browser.webRequest.onBeforeRequest.addListener((request) => {
     let queryEntries = Object.fromEntries(originalUrlObject.searchParams.entries());
     if (originalUrlObject.host === "www.google.com" &&
         queryEntries["client"].startsWith("firefox") &&
-        queryEntries["q"].endsWith(".ipfs")) {
+        queryEntries["q"].indexOf(".ipfs") > -1) {
       return { redirectUrl: `http://${queryEntries.q}` };
     }
   }
 }, {"urls":["https://*.google.com/*"]}, ["blocking"]);
+
+browser.runtime.onInstalled.addListener(async () => {
+  // Connecting to https://arthuredelstein.net ahead of time
+  // to make sure we don't see certificate errors in Firefox.
+  await fetch("https://arthuredelstein.net");
+});
