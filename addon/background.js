@@ -4,7 +4,7 @@ console.log("hello");
 const handleProxyRequest = (requestInfo) => {
   const url = new URL(requestInfo.url);
   if (url.hostname.endsWith(".ipfs")) {
-    let proxyInfo = [{type: "http", host: "dweb.arthuredelstein.net", port: 8500 }];
+    let proxyInfo = [{type: "https", host: "dweb.arthuredelstein.net", port: 8500 }];
     return proxyInfo;
   } else {
     return [{type: "direct"}];
