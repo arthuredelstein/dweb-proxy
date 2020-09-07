@@ -6,6 +6,7 @@ browser.proxy.onRequest.addListener((requestInfo) => {
   const url = new URL(requestInfo.url);
   if (url.hostname.endsWith(".ipfs")) {
     let proxyInfo = [{type: "https", host: "arthuredelstein.net", port: 8500 }];
+    //let proxyInfo = [{type: "http", host: "localhost", port: 8080 }];
     return proxyInfo;
   } else {
     return [{type: "direct"}];
