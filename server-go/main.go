@@ -9,10 +9,40 @@ import (
   "net/http"
 )
 
-
-
+func copyHeaders(incomingHeader http.Header, outgoingHeader http.Header, headersToCopy []string) {
+  for _, key := range headersToCopy {
+    if values := incomingHeader.Values(key); len(values) > 0 {
+      outgoingHeader.Del(key)
+      for _, value := range values {
+        //fmt.Println(key, ":", value)
+        outgoingHeader.Add(key, value)
+      }
+    }
+  }
+}
 
 func main() {
+  requestHeadersToCopy := []string {
+    "accept",
+    "accept-encoding",
+    "cache-control",
+    "DNT",
+    "If-Modified-Since"}
+
+  responseHeadersToCopy := []string {
+    "access-control-allow-headers",
+    "access-control-allow-origin",
+    "access-control-expose-headers",
+    "age",
+    "cache-control",
+    "content-encoding",
+    "content-type",
+    "date",
+    "last-modified",
+    "x-content-type-options",
+    "x-ipfs-path",
+    "x-xss-protection"}
+
   fmt.Println("starting\n");
   re, _ := regexp.Compile("^([a-z0-9]+)\\.ipfs$")
 
@@ -28,11 +58,16 @@ func main() {
       fmt.Println("cidv1", cidv1);
       gatewayUrl := fmt.Sprintf("https://cloudflare-ipfs.com/ipfs/%s%s", cidv1, r.URL.Path);
       fmt.Println("gatewayUrl", gatewayUrl);
-      resp, _ := http.Get(gatewayUrl)
+      outgoingRequest, _ := http.NewRequest("GET", gatewayUrl, nil)
+      copyHeaders(r.Header, outgoingRequest.Header, requestHeadersToCopy)
+      resp, _ := http.DefaultClient.Do(outgoingRequest)
       defer resp.Body.Close()
+      writerHeader := w.Header()
+      copyHeaders(resp.Header, writerHeader, responseHeadersToCopy)
+      w.WriteHeader(resp.StatusCode)
       io.Copy(w, resp.Body)
     }
   })
 
-  log.Fatal(http.ListenAndServeTLS(":8500", "/home/arthur/certs/arthuredelstein.net/cert.pem", "/home/arthur/certs/arthuredelstein.net/privkey.pem", nil))
+  log.Fatal(http.ListenAndServe(":8501", nil))
 }
