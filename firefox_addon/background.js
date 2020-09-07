@@ -1,8 +1,7 @@
 console.log("Loading dweb-proxy");
 
-
 // Proxy all dweb (.ipfs) requests via
-// https://dweb.arthuredelstein.net:8500
+// https://arthuredelstein.net:8500
 browser.proxy.onRequest.addListener((requestInfo) => {
   const url = new URL(requestInfo.url);
   if (url.hostname.endsWith(".ipfs")) {
