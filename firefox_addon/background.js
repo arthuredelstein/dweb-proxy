@@ -4,7 +4,7 @@ console.log("Loading dweb-proxy");
 // https://arthuredelstein.net:8500
 browser.proxy.onRequest.addListener((requestInfo) => {
   const url = new URL(requestInfo.url);
-  if (url.hostname.endsWith(".ipfs")) {
+  if (url.hostname.endsWith(".ipfs") || url.hostname.startsWith("ipns.")) {
     let proxyInfo = [{type: "https", host: "arthuredelstein.net", port: 8500 }];
     //let proxyInfo = [{type: "http", host: "localhost", port: 8080 }];
     return proxyInfo;
@@ -23,7 +23,8 @@ browser.webRequest.onBeforeRequest.addListener((request) => {
     let queryEntries = Object.fromEntries(originalUrlObject.searchParams.entries());
     if (originalUrlObject.host === "www.google.com" &&
         queryEntries["client"].startsWith("firefox") &&
-        queryEntries["q"].indexOf(".ipfs") > -1) {
+        (queryEntries["q"].indexOf(".ipfs") > -1) ||
+        (queryEntries["q"].indexOf("ipns.") === 0)) {
       return { redirectUrl: `http://${queryEntries.q}` };
     }
   }
