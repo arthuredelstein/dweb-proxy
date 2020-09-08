@@ -2,7 +2,7 @@ Seamless browser add-on for using IPFS.
 
 URLs are in the format http://{cid}.ipfs/path, http://ipns.{dns-name}/path .
 
-After installing the add-on, here are some URLs you can try:
+After you install the add-on, here are some URLs you can try:
 * http://bafybeiemxf5abjwjbikoz4mc3a3dla6ual3jsgpdr4cjr3oz3evfyavhwq.ipfs/wiki/
 * http://ipns.ethereum.eth
 
