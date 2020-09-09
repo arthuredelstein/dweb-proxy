@@ -1,13 +1,28 @@
 console.log("Loading dweb-proxy");
 
+let currentProxyInfo;
+
+let proxyInfoFromURL = (url) => {
+  let { protocol, hostname, port } = theURLObject = new URL(url);
+  return {
+    type: protocol.split(":")[0],
+    host: hostname,
+    port
+  };
+};
+
+let updateCurrentProxyInfo = async () => {
+  let { ipfs_source } = await browser.storage.local.get("ipfs_source");
+  currentProxyInfo = proxyInfoFromURL(ipfs_source);
+};
+
 // Proxy all dweb (.ipfs) requests via
 // https://arthuredelstein.net:8500
 browser.proxy.onRequest.addListener((requestInfo) => {
   const url = new URL(requestInfo.url);
   if (url.hostname.endsWith(".ipfs") || url.hostname.startsWith("ipns.")) {
-    let proxyInfo = [{type: "https", host: "arthuredelstein.net", port: 8500 }];
-    //let proxyInfo = [{type: "http", host: "localhost", port: 8080 }];
-    return proxyInfo;
+    console.log(currentProxyInfo);
+    return currentProxyInfo;
   } else {
     return [{type: "direct"}];
   }
@@ -34,4 +49,7 @@ browser.runtime.onInstalled.addListener(async () => {
   // Connecting to https://arthuredelstein.net ahead of time
   // to make sure we don't see certificate errors in Firefox.
   await fetch("https://arthuredelstein.net");
+  await browser.storage.local.set({ ipfs_source: "https://arthuredelstein.net:8500" });
+  await updateCurrentProxyInfo();
+  browser.storage.onChanged.addListener(updateCurrentProxyInfo);
 });

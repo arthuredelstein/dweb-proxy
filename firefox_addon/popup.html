@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf8"/>
+    <style>
+     body {
+       font-size: 14px;
+       font-family: sans-serif;
+       padding: 10px 20px;
+       background-color: #F7F7F7;
+     }
+     select {
+       font-size: 14px;
+       margin: 8px;
+     }
+     h1 {
+       font-size: 18px;
+       font-weight: bold;
+     }
+    </style>
+  </head>
+  <body>
+    <div>
+      <h1>DWeb Proxy</h1>
+      <p>IPFS Source
+        <select name="ipfs_source" id="ipfs_source">
+          <!-- <option value="auto">Automatic</option> -->
+          <option value="https://arthuredelstein.net:8500">https://arthuredelstein.net:8500</option>
+          <option value="http://localhost:8080">http://localhost:8080</option>
+          <!-- <option value="custom">Custom</option> -->
+        </select>
+        <script src="popup.js"></script>
+      <p>
+    </div>
+  </body>
+</html>
