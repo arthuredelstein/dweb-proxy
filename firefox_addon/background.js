@@ -1,5 +1,21 @@
 console.log("Loading dweb-proxy");
 
+var config = ({ type, host, port }) => ({
+  mode: "pac_script",
+  pacScript: {
+    data: `
+function FindProxyForURL(url, host) {
+  if (host.endsWith('.ipfs') || host.startsWith('ipns.')) {
+    return "${type.toUpperCase()} ${host}:${port}";
+  }
+  return 'DIRECT';
+}
+    `,
+    mandatory: true
+  }
+});
+
+
 let currentProxyInfo;
 
 let proxyInfoFromURL = (url) => {
@@ -14,19 +30,27 @@ let proxyInfoFromURL = (url) => {
 let updateCurrentProxyInfo = async () => {
   let { ipfs_source } = await browser.storage.local.get("ipfs_source");
   currentProxyInfo = proxyInfoFromURL(ipfs_source);
+  if (!browser.proxy.onRequest) {
+    chrome.proxy.settings.set(
+      {value: config(currentProxyInfo), scope: 'regular'},
+      function() { console.log("done"); });
+  }
 };
 
-// Proxy all dweb (.ipfs) requests via
-// https://arthuredelstein.net:8500
-browser.proxy.onRequest.addListener((requestInfo) => {
-  const url = new URL(requestInfo.url);
-  if (url.hostname.endsWith(".ipfs") || url.hostname.startsWith("ipns.")) {
-    console.log(currentProxyInfo);
-    return currentProxyInfo;
-  } else {
-    return [{type: "direct"}];
-  }
-}, {urls: ["<all_urls>"]});
+if (browser.proxy.onRequest) {
+  // Proxy all dweb (.ipfs) requests via `currentProxyInfo`
+  browser.proxy.onRequest.addListener((requestInfo) => {
+    const url = new URL(requestInfo.url);
+    console.log(url.hostname);
+    if (url.hostname.endsWith(".ipfs") || url.hostname.startsWith("ipns.")) {
+      console.log("dweb!");
+      console.log(currentProxyInfo);
+      return currentProxyInfo;
+    } else {
+      return [{type: "direct"}];
+    }
+  }, {urls: ["<all_urls>"]});
+}
 
 // If user enters example.ipfs domain in the address bar, stop the browser
 // from searching via Google or other search engine, but instead
@@ -35,12 +59,14 @@ browser.webRequest.onBeforeRequest.addListener((request) => {
   if (request.originUrl === undefined && request.parentFrameId === -1) {
     let originalUrl = request.url;
     let originalUrlObject = new URL(originalUrl);
-    let queryEntries = Object.fromEntries(originalUrlObject.searchParams.entries());
+    let { client, sourceid, q } = Object.fromEntries(
+      originalUrlObject.searchParams.entries());
     if (originalUrlObject.host === "www.google.com" &&
-        queryEntries["client"].startsWith("firefox") &&
-        (queryEntries["q"].indexOf(".ipfs") > -1) ||
-        (queryEntries["q"].indexOf("ipns.") === 0)) {
-      return { redirectUrl: `http://${queryEntries.q}` };
+        ((client && client.startsWith("firefox")) ||
+         (sourceid && sourceid.startsWith("chrome"))) &&
+        (q && q.indexOf(".ipfs") > -1) ||
+        (q && q.indexOf("ipns.") === 0)) {
+      return { redirectUrl: `http://${q}` };
     }
   }
 }, {"urls":["https://*.google.com/*"]}, ["blocking"]);
@@ -52,4 +78,6 @@ browser.runtime.onInstalled.addListener(async () => {
   await browser.storage.local.set({ ipfs_source: "https://arthuredelstein.net:8500" });
   await updateCurrentProxyInfo();
   browser.storage.onChanged.addListener(updateCurrentProxyInfo);
+  let tab = await browser.tabs.create(
+    {url: "http://bafybeiduon5uf5f7snvlpdgacn2qrb3pw6ff54wdjckaryztnr4cdyg2p4.ipfs/"});
 });

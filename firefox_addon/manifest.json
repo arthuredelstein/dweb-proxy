@@ -10,19 +10,11 @@
     "96": "icon.svg"
   },
 
-  "browser_specific_settings": {
-    "gecko": {
-      "strict_min_version": "68.0"
-    }
-  },
-
   "background": {
-    "scripts": [
-      "background.js"
-    ]
+    "page": "background.html"
   },
 
-  "permissions": ["proxy", "webNavigation", "webRequest", "webRequestBlocking", "<all_urls>", "storage"],
+  "permissions": ["proxy", "webNavigation", "webRequest", "webRequestBlocking", "<all_urls>", "storage", "manifest"],
 
   "browser_action": {
     "default_title": "Dweb Express",
