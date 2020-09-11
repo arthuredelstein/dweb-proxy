@@ -41,15 +41,14 @@ if (browser.proxy.onRequest) {
   // Proxy all dweb (.ipfs) requests via `currentProxyInfo`
   browser.proxy.onRequest.addListener((requestInfo) => {
     const url = new URL(requestInfo.url);
-    console.log(url.hostname);
     if (url.hostname.endsWith(".ipfs") || url.hostname.startsWith("ipns.")) {
-      console.log("dweb!");
-      console.log(currentProxyInfo);
+      console.log(url.hostname, ":", currentProxyInfo);
       return currentProxyInfo;
     } else {
       return [{type: "direct"}];
     }
-  }, {urls: ["<all_urls>"]});
+    return currentProxyInfo;
+  }, {urls: ["http://*/*"]});
 }
 
 // If user enters example.ipfs domain in the address bar, stop the browser
@@ -71,13 +70,25 @@ browser.webRequest.onBeforeRequest.addListener((request) => {
   }
 }, {"urls":["https://*.google.com/*"]}, ["blocking"]);
 
-browser.runtime.onInstalled.addListener(async () => {
+
+let init = async () => {
   // Connecting to https://arthuredelstein.net ahead of time
   // to make sure we don't see certificate errors in Firefox.
   await fetch("https://arthuredelstein.net");
   await browser.storage.local.set({ ipfs_source: "https://arthuredelstein.net:8500" });
   await updateCurrentProxyInfo();
   browser.storage.onChanged.addListener(updateCurrentProxyInfo);
+  console.log("init complete");
+};
+
+browser.runtime.onStartup.addListener(async () => {
+  console.log("onStartup");
+  await init();
+});
+
+browser.runtime.onInstalled.addListener(async () => {
+  console.log("onInstalled");
+  await init();
   let tab = await browser.tabs.create(
     {url: "http://bafybeiduon5uf5f7snvlpdgacn2qrb3pw6ff54wdjckaryztnr4cdyg2p4.ipfs/"});
 });
