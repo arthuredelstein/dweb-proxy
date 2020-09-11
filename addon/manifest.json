@@ -1,9 +1,9 @@
 {
 
   "manifest_version": 2,
-  "name": "proxy-dweb",
+  "name": "dweb-proxy",
   "description": "Connects to a proxy to load dweb protocols",
-  "version": "0.1",
+  "version": "0.4",
 
   "icons": {
     "48": "icon.svg",
@@ -14,7 +14,7 @@
     "page": "background.html"
   },
 
-  "permissions": ["proxy", "webNavigation", "webRequest", "webRequestBlocking", "<all_urls>", "storage"],
+  "permissions": ["proxy", "webNavigation", "webRequest", "webRequestBlocking", "storage", "<all_urls>"],
 
   "browser_action": {
     "default_title": "Dweb Express",
