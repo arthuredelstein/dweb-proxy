@@ -75,7 +75,6 @@ let init = async () => {
   // Connecting to https://arthuredelstein.net ahead of time
   // to make sure we don't see certificate errors in Firefox.
   await fetch("https://arthuredelstein.net");
-  await browser.storage.local.set({ ipfs_source: "https://arthuredelstein.net:8500" });
   await updateCurrentProxyInfo();
   browser.storage.onChanged.addListener(updateCurrentProxyInfo);
   console.log("init complete");
@@ -88,6 +87,7 @@ browser.runtime.onStartup.addListener(async () => {
 
 browser.runtime.onInstalled.addListener(async () => {
   console.log("onInstalled");
+  await browser.storage.local.set({ ipfs_source: "https://arthuredelstein.net:8500" });
   await init();
   let tab = await browser.tabs.create(
     {url: "http://bafybeiduon5uf5f7snvlpdgacn2qrb3pw6ff54wdjckaryztnr4cdyg2p4.ipfs/"});
