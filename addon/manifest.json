@@ -14,7 +14,7 @@
     "page": "background.html"
   },
 
-  "permissions": ["proxy", "webNavigation", "webRequest", "webRequestBlocking", "<all_urls>", "storage", "manifest"],
+  "permissions": ["proxy", "webNavigation", "webRequest", "webRequestBlocking", "<all_urls>", "storage"],
 
   "browser_action": {
     "default_title": "Dweb Express",
