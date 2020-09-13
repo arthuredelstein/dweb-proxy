@@ -1,0 +1,19 @@
+{
+  "name": "dweb-proxy",
+  "version": "0.0.9",
+  "description": "A browser add-on for connecting to dweb protocols",
+  "main": "background.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "webextension-polyfill": "^0.6.0",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12"
+  },
+  "dependencies": {
+    "cids": "^1.0.0"
+  }
+}
