@@ -8,7 +8,9 @@ var config = ({ type, host, port }) => ({
   pacScript: {
     data: `
 function FindProxyForURL(url, host) {
-  if (host.endsWith('.ipfs') || host.startsWith('ipns.')) {
+  if (host.endsWith('.ipfs') ||
+      host.endsWith('.ipns') ||
+      host.endsWith('.eth')) {
     return "${type.toUpperCase()} ${host}:${port}";
   }
   return 'DIRECT';
@@ -45,7 +47,9 @@ let setupProxying = () => {
     // Proxy all dweb (.ipfs) requests via `currentProxyInfo`
     browser.proxy.onRequest.addListener((requestInfo) => {
       const url = new URL(requestInfo.url);
-      if (url.hostname.endsWith(".ipfs") || url.hostname.startsWith("ipns.")) {
+      if (url.hostname.endsWith(".ipfs") ||
+          url.hostname.endsWith(".ipns") ||
+          url.hostname.endsWith(".eth")) {
         console.log(url.hostname, ":", currentProxyInfo);
         return currentProxyInfo;
       } else {
@@ -70,7 +74,8 @@ let setupSearchRedirects = () => {
           ((client && client.startsWith("firefox")) ||
            (sourceid && sourceid.startsWith("chrome"))) &&
           (q && q.indexOf(".ipfs") > -1) ||
-          (q && q.indexOf("ipns.") === 0)) {
+          (q && q.indexOf(".ipns") > -1) ||
+          (q && q.indexOf(".eth") > -1)) {
         return { redirectUrl: `http://${q}` };
       }
     }
