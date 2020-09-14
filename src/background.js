@@ -25,8 +25,12 @@ let currentProxyInfo;
 
 let proxyInfoFromURL = (url) => {
   let { protocol, hostname, port } = theURLObject = new URL(url);
+  let type = protocol.split(":")[0];
+  if (port === "") {
+    port = {"https": "443", "http": "80"}[type];
+  }
   return {
-    type: protocol.split(":")[0],
+    type,
     host: hostname,
     port
   };
@@ -102,7 +106,7 @@ let setupIPFSRedirects = () => {
   }, {"urls": ["https://*/ipfs/*", "http://*/ipfs/*"]}, ["blocking"]);
 };
 
-const example_links_page_url = "http://bafybeiduon5uf5f7snvlpdgacn2qrb3pw6ff54wdjckaryztnr4cdyg2p4.ipfs/";
+const example_links_page_url = "http://bafybeienxobqj6qjqf4ga77qeohxzjhfotbjefdognpx4ah5iysnnlhega.ipfs/";
 let showExampleLinks = async () => {
   await browser.tabs.create({url: example_links_page_url});
 }
