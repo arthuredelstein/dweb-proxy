@@ -88,7 +88,7 @@ let setupIPFSRedirects = () => {
   browser.webRequest.onBeforeRequest.addListener((request) => {
     let url = new URL(request.url);
     console.log(request.url);
-    let cid = url.pathname.match(/\/ipfs\/(Qm[a-zA-Z0-9]{44}|[a-z0-9]+)/)[1]
+    let cid = url.pathname.match(/\/ipfs\/(Qm[a-zA-Z0-9]{44}|[a-z0-9]+)/)[1];
     console.log("cid:", cid);
     let cidV1 = cidV1fromString(cid);
     console.log("cidV1:", cidV1);
@@ -97,6 +97,11 @@ let setupIPFSRedirects = () => {
   }, {"urls": ["https://*/ipfs/*", "http://*/ipfs/*"]}, ["blocking"]);
 };
 
+const example_links_page_url = "http://bafybeiduon5uf5f7snvlpdgacn2qrb3pw6ff54wdjckaryztnr4cdyg2p4.ipfs/";
+let showExampleLinks = async () => {
+  await browser.tabs.create({url: example_links_page_url});
+}
+
 // Things we must do on startup or first installation
 let init = async () => {
   setupProxying();
@@ -104,6 +109,11 @@ let init = async () => {
   setupIPFSRedirects();
   browser.storage.onChanged.addListener(updateCurrentProxyInfo);
   await updateCurrentProxyInfo();
+  browser.runtime.onMessage.addListener(async (data) => {
+    if (data === "show_example_links") {
+      await showExampleLinks();
+    }
+  });
   // Connecting to https://arthuredelstein.net ahead of time
   // to make sure we don't see certificate errors in Firefox.
   await fetch("https://arthuredelstein.net");
@@ -119,6 +129,5 @@ browser.runtime.onInstalled.addListener(async () => {
   console.log("onInstalled");
   await browser.storage.local.set({ ipfs_source: "https://arthuredelstein.net:8500" });
   await init();
-  let tab = await browser.tabs.create(
-    {url: "http://bafybeiduon5uf5f7snvlpdgacn2qrb3pw6ff54wdjckaryztnr4cdyg2p4.ipfs/"});
+  showExampleLinks();
 });
