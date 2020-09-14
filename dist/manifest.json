@@ -3,7 +3,7 @@
   "manifest_version": 2,
   "name": "dweb-proxy",
   "description": "Connects to a proxy to load dweb protocols",
-  "version": "0.0.14",
+  "version": "0.0.15",
 
   "icons": {
     "48": "icon.svg",
