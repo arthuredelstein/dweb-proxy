@@ -10,10 +10,10 @@ var browser = require("webextension-polyfill");
     await browser.storage.local.set({"ipfs_source": ipfs_source.value});
   });
   let example_links = document.getElementById("example_links");
-  example_links.addEventListener("click", (event) => {
-    console.log("example_links clicked");
-    browser.runtime.sendMessage("show_example_links");
+  example_links.addEventListener("click", async (event) => {
     event.preventDefault();
+    console.log("example_links clicked");
+    await browser.runtime.sendMessage("show_example_links");
     window.close();
   });
 })();
