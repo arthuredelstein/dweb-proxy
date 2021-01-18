@@ -1,8 +1,13 @@
 var browser = require("webextension-polyfill");
 const CID = require('cids');
+const IPFS = require('ipfs')
 
 console.log("Loading dweb-proxy");
 
+// State: current proxyInfo object.
+let currentProxyInfo;
+
+// Generate PAC file text.
 var config = ({ type, host, port }) => ({
   mode: "pac_script",
   pacScript: {
@@ -20,9 +25,9 @@ function FindProxyForURL(url, host) {
   }
 });
 
-
-let currentProxyInfo;
-
+// Generates a proxyInfo object from a URL.
+// For example, https://arthuredelstein.net:8500 ->
+// { type: "https", host: "arthuredelstein.net", port: 8500 }
 let proxyInfoFromURL = (url) => {
   let { protocol, hostname, port } = theURLObject = new URL(url);
   let type = protocol.split(":")[0];
@@ -36,6 +41,8 @@ let proxyInfoFromURL = (url) => {
   };
 };
 
+// Point the `currentProxyInfo` object to the current
+// ipfs_source chosen by the user.
 let updateCurrentProxyInfo = async () => {
   let { ipfs_source } = await browser.storage.local.get("ipfs_source");
   currentProxyInfo = proxyInfoFromURL(ipfs_source);
@@ -46,6 +53,7 @@ let updateCurrentProxyInfo = async () => {
   }
 };
 
+// Set up proxying 
 let setupProxying = () => {
   if (browser.proxy.onRequest) {
     // Proxy all dweb (.ipfs) requests via `currentProxyInfo`
@@ -111,6 +119,17 @@ let showExampleLinks = async () => {
   await browser.tabs.create({url: example_links_page_url});
 }
 
+let test_p2p = async () => {
+  const ipfs = await IPFS.create();
+  const file = ipfs.cat("QmPChd2hVbrJ6bfo3WBcTW4iZnpHm8TEzWkLHmLpXhF68A");
+  console.log(typeof file);
+  console.log(file);
+  let i = 0;
+  for (let chunk of file) {
+    console.log(chunk);
+  };
+};
+
 // Things we must do on startup or first installation
 let init = async () => {
   setupProxying();
@@ -126,6 +145,8 @@ let init = async () => {
   // Connecting to https://arthuredelstein.net ahead of time
   // to make sure we don't see certificate errors in Firefox.
   await fetch("https://arthuredelstein.net");
+
+  console.log("ipfs node ready!");
   console.log("init complete");
 };
 
