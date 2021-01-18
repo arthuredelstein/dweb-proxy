@@ -1,6 +1,6 @@
 var browser = require("webextension-polyfill");
 const CID = require('cids');
-const IPFS = require('ipfs');
+// const IPFS = require('ipfs');
 const memoize = require('fast-memoize');
 
 console.log("Loading dweb-proxy");
@@ -124,6 +124,7 @@ let showExampleLinks = async () => {
   await browser.tabs.create({url: example_links_page_url});
 }
 
+/*
 // Trying out p2p loading using the IPFS library.
 let test_p2p = async () => {
   const ipfs = await IPFS.create();
@@ -135,6 +136,7 @@ let test_p2p = async () => {
     console.log(chunk);
   };
 };
+*/
 
 // Things we must do on startup or first installation
 let init = async () => {
