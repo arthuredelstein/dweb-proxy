@@ -1,14 +1,28 @@
 var browser = require("webextension-polyfill");
 const CID = require('cids');
-const IPFS = require('ipfs')
+const IPFS = require('ipfs');
+const memoize = require('fast-memoize');
 
 console.log("Loading dweb-proxy");
 
-// State: current proxyInfo object.
-let currentProxyInfo;
+// Generates a proxyInfo object from a URL.
+// For example, https://arthuredelstein.net:8500 ->
+// { type: "https", host: "arthuredelstein.net", port: 8500 }
+let proxyInfoFromURL = memoize((url) => {
+  let { protocol, hostname, port } = theURLObject = new URL(url);
+  let type = protocol.split(":")[0];
+  if (port === "") {
+    port = {"https": "443", "http": "80"}[type];
+  }
+  return {
+    type,
+    host: hostname,
+    port
+  };
+});
 
 // Generate PAC file text.
-var config = ({ type, host, port }) => ({
+var pacFromProxyInfo = ({ type, host, port }) => ({
   mode: "pac_script",
   pacScript: {
     data: `
@@ -25,49 +39,40 @@ function FindProxyForURL(url, host) {
   }
 });
 
-// Generates a proxyInfo object from a URL.
-// For example, https://arthuredelstein.net:8500 ->
-// { type: "https", host: "arthuredelstein.net", port: 8500 }
-let proxyInfoFromURL = (url) => {
-  let { protocol, hostname, port } = theURLObject = new URL(url);
-  let type = protocol.split(":")[0];
-  if (port === "") {
-    port = {"https": "443", "http": "80"}[type];
-  }
-  return {
-    type,
-    host: hostname,
-    port
-  };
+// Generate a pac file from an ipfs source URL.
+var pacFromURL = memoize(url => pacFromProxyInfo(proxyInfoFromURL(url)));
+
+// Read the ipfs source proxy address.
+let getProxyAddress = async () => {
+  let { ipfs_source } = await browser.storage.local.get("ipfs_source");
+  return ipfs_source;
 };
 
 // Point the `currentProxyInfo` object to the current
 // ipfs_source chosen by the user.
 let updateCurrentProxyInfo = async () => {
-  let { ipfs_source } = await browser.storage.local.get("ipfs_source");
-  currentProxyInfo = proxyInfoFromURL(ipfs_source);
   if (!browser.proxy.onRequest) {
     chrome.proxy.settings.set(
-      {value: config(currentProxyInfo), scope: 'regular'},
+      {value: pacFromURL(await getProxyAddress()), scope: 'regular'},
       function() { console.log("done"); });
   }
 };
 
-// Set up proxying 
+// Set up proxying
 let setupProxying = () => {
   if (browser.proxy.onRequest) {
-    // Proxy all dweb (.ipfs) requests via `currentProxyInfo`
-    browser.proxy.onRequest.addListener((requestInfo) => {
+    browser.proxy.onRequest.addListener(async (requestInfo) => {
       const url = new URL(requestInfo.url);
+      const proxyInfo = proxyInfoFromURL(await getProxyAddress());
       if (url.hostname.endsWith(".ipfs") ||
           url.hostname.endsWith(".ipns") ||
           url.hostname.endsWith(".eth")) {
-        console.log(url.hostname, ":", currentProxyInfo);
-        return currentProxyInfo;
+        console.log(url.hostname, ":", proxyInfo);
+        return proxyInfo;
       } else {
         return [{type: "direct"}];
       }
-      return currentProxyInfo;
+      return proxyInfo;
     }, {urls: ["http://*/*"]});
   }
 };
@@ -119,6 +124,7 @@ let showExampleLinks = async () => {
   await browser.tabs.create({url: example_links_page_url});
 }
 
+// Trying out p2p loading using the IPFS library.
 let test_p2p = async () => {
   const ipfs = await IPFS.create();
   const file = ipfs.cat("QmPChd2hVbrJ6bfo3WBcTW4iZnpHm8TEzWkLHmLpXhF68A");
@@ -150,11 +156,13 @@ let init = async () => {
   console.log("init complete");
 };
 
+// Initialize on startup
 browser.runtime.onStartup.addListener(async () => {
   console.log("onStartup");
   await init();
 });
 
+// Initialize on installation and set defaults
 browser.runtime.onInstalled.addListener(async () => {
   console.log("onInstalled");
   await browser.storage.local.set({ ipfs_source: "https://arthuredelstein.net:8500" });
