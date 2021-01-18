@@ -52,15 +52,13 @@ let getProxyAddress = async () => {
 // ipfs_source chosen by the user.
 let updateCurrentProxyInfo = async () => {
   if (!browser.proxy.onRequest) {
-    chrome.proxy.settings.set(
-      {value: pacFromURL(await getProxyAddress()), scope: 'regular'},
-      function() { console.log("done"); });
   }
 };
 
 // Set up proxying
-let setupProxying = () => {
+let setupProxying = async () => {
   if (browser.proxy.onRequest) {
+    // We have a Gecko-like browser
     browser.proxy.onRequest.addListener(async (requestInfo) => {
       const url = new URL(requestInfo.url);
       const proxyInfo = proxyInfoFromURL(await getProxyAddress());
@@ -74,6 +72,13 @@ let setupProxying = () => {
       }
       return proxyInfo;
     }, {urls: ["http://*/*"]});
+  } else {
+    // We have a Chrome-like browser
+    let setChromeProxySettings = async () => chrome.proxy.settings.set(
+      {value: pacFromURL(await getProxyAddress()), scope: 'regular'},
+      function() { console.log("done"); });
+    await setChromeProxySettings();
+    browser.storage.onChanged.addListener(setChromeProxySettings);
   }
 };
 
@@ -140,11 +145,9 @@ let test_p2p = async () => {
 
 // Things we must do on startup or first installation
 let init = async () => {
-  setupProxying();
+  await setupProxying();
   setupSearchRedirects();
   setupIPFSRedirects();
-  browser.storage.onChanged.addListener(updateCurrentProxyInfo);
-  await updateCurrentProxyInfo();
   browser.runtime.onMessage.addListener(async (data) => {
     if (data === "show_example_links") {
       await showExampleLinks();
