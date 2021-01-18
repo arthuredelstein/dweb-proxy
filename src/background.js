@@ -140,6 +140,7 @@ let test_p2p = async () => {
   for (let chunk of file) {
     console.log(chunk);
   };
+  console.log("ipfs node ready!");
 };
 */
 
@@ -156,8 +157,6 @@ let init = async () => {
   // Connecting to https://arthuredelstein.net ahead of time
   // to make sure we don't see certificate errors in Firefox.
   await fetch("https://arthuredelstein.net");
-
-  console.log("ipfs node ready!");
   console.log("init complete");
 };
 
