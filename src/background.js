@@ -48,20 +48,13 @@ let getProxyAddress = async () => {
   return ipfs_source;
 };
 
-// Point the `currentProxyInfo` object to the current
-// ipfs_source chosen by the user.
-let updateCurrentProxyInfo = async () => {
-  if (!browser.proxy.onRequest) {
-  }
-};
-
 // Set up proxying
 let setupProxying = async () => {
   if (browser.proxy.onRequest) {
     // We have a Gecko-like browser
     browser.proxy.onRequest.addListener(async (requestInfo) => {
       const url = new URL(requestInfo.url);
-      const proxyInfo = proxyInfoFromURL(await getProxyAddress());
+      const proxyInfo = proxyInfoFromURL("https://arthuredelstein.net"); //await getProxyAddress());
       if (url.hostname.endsWith(".ipfs") ||
           url.hostname.endsWith(".ipns") ||
           url.hostname.endsWith(".eth")) {
@@ -72,6 +65,23 @@ let setupProxying = async () => {
       }
       return proxyInfo;
     }, {urls: ["http://*/*"]});
+    browser.webRequest.onBeforeRequest.addListener(
+      details => {
+        let filter = browser.webRequest.filterResponseData(details.requestId);
+        filter.onstart = async () => {
+          let response = await fetch("http://ipfs.io/ipfs/bafybeienxobqj6qjqf4ga77qeohxzjhfotbjefdognpx4ah5iysnnlhega/");
+          let data = await response.arrayBuffer();
+          filter.write(data);
+          filter.close();
+        }
+      },
+      {"urls": ["http://*.ipfs/*", "http://*.ipns/*", "http://*.eth/*"]},
+      ["blocking"]);
+    browser.webRequest.onHeadersReceived.addListener(
+      (details) => console.log("onHeadersReceived", details),
+      {"urls": ["http://*.ipfs/*", "http://*.ipns/*", "http://*.eth/*"]},
+      ["blocking", "responseHeaders"]
+    );
   } else {
     // We have a Chrome-like browser
     let setChromeProxySettings = async () => chrome.proxy.settings.set(
@@ -148,7 +158,7 @@ let test_p2p = async () => {
 let init = async () => {
   await setupProxying();
   setupSearchRedirects();
-  setupIPFSRedirects();
+//  setupIPFSRedirects();
   browser.runtime.onMessage.addListener(async (data) => {
     if (data === "show_example_links") {
       await showExampleLinks();
