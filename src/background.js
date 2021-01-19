@@ -48,6 +48,11 @@ let getProxyAddress = async () => {
   return ipfs_source;
 };
 
+let gatewayFromIPFS = url => {
+  const [cidv1, path] = url.match("([a-z0-9]+)\.ipfs(\/?.+)").slice(1);
+  return `https://ipfs.io/ipfs/${cidv1}${path}`;
+}
+
 // Set up proxying
 let setupProxying = async () => {
   if (browser.proxy.onRequest) {
@@ -67,9 +72,11 @@ let setupProxying = async () => {
     }, {urls: ["http://*/*"]});
     browser.webRequest.onBeforeRequest.addListener(
       details => {
+        console.log("about to filter", details.url);
+        let responsePromise = fetch(gatewayFromIPFS(details.url));
         let filter = browser.webRequest.filterResponseData(details.requestId);
         filter.onstart = async () => {
-          let response = await fetch("http://ipfs.io/ipfs/bafybeienxobqj6qjqf4ga77qeohxzjhfotbjefdognpx4ah5iysnnlhega/");
+          let response = await responsePromise;
           let data = await response.arrayBuffer();
           filter.write(data);
           filter.close();
