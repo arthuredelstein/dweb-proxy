@@ -89,6 +89,10 @@ let setupProxying = async () => {
       {"urls": ["http://*.ipfs/*", "http://*.ipns/*", "http://*.eth/*"]},
       ["blocking", "responseHeaders"]
     );
+    browser.webRequest.onErrorOccurred.addListener(
+      (details) => console.log("error:", details.error),
+      {"urls": ["http://*.ipfs/*", "http://*.ipns/*", "http://*.eth/*"]},
+    );
   } else {
     // We have a Chrome-like browser
     let setChromeProxySettings = async () => chrome.proxy.settings.set(
