@@ -53,13 +53,15 @@ let gatewayFromIPFS = url => {
   return `https://ipfs.io/ipfs/${cidv1}${path}`;
 }
 
+let responsePromiseMap = new Map();
+
 // Set up proxying
 let setupProxying = async () => {
   if (browser.proxy.onRequest) {
     // We have a Gecko-like browser
     browser.proxy.onRequest.addListener(async (requestInfo) => {
       const url = new URL(requestInfo.url);
-      const proxyInfo = proxyInfoFromURL("https://arthuredelstein.net"); //await getProxyAddress());
+      const proxyInfo = proxyInfoFromURL("https://arthuredelstein.net:8500"); //await getProxyAddress());
       if (url.hostname.endsWith(".ipfs") ||
           url.hostname.endsWith(".ipns") ||
           url.hostname.endsWith(".eth")) {
@@ -71,21 +73,44 @@ let setupProxying = async () => {
       return proxyInfo;
     }, {urls: ["http://*/*"]});
     browser.webRequest.onBeforeRequest.addListener(
-      details => {
+      async details => {
         console.log("about to filter", details.url);
         let responsePromise = fetch(gatewayFromIPFS(details.url));
+        let response = await responsePromise;
+//        console.log([...response.headers.entries()]);
+//        console.log("fetch received content type:", response.headers.get("content-type"));
+        responsePromiseMap.set(details.requestId, responsePromise);
         let filter = browser.webRequest.filterResponseData(details.requestId);
         filter.onstart = async () => {
           let response = await responsePromise;
-          let data = await response.arrayBuffer();
-          filter.write(data);
+          let reader = response.body.getReader();
+          while (true) {
+            let { value, done } = await reader.read();
+            if (done) {
+              break;
+            }
+            //console.log("read value", value);
+            filter.write(value);
+          }
           filter.close();
         }
       },
       {"urls": ["http://*.ipfs/*", "http://*.ipns/*", "http://*.eth/*"]},
       ["blocking"]);
     browser.webRequest.onHeadersReceived.addListener(
-      (details) => console.log("onHeadersReceived", details),
+      async (details) => {
+        console.log("onHeadersReceived", details);
+        let response = await responsePromiseMap.get(details.requestId);
+        let contentType = response.headers.get("content-type");
+        console.log("attempting to push", contentType);
+        details.responseHeaders.push(
+          {name: "content-type", value: contentType},
+        );
+        details.responseHeaders.push(
+          {name: "Cache-Control", value: "public, max-age=31536000, immutable"}
+        );
+        return details;
+      },
       {"urls": ["http://*.ipfs/*", "http://*.ipns/*", "http://*.eth/*"]},
       ["blocking", "responseHeaders"]
     );
