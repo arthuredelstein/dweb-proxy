@@ -1,7 +1,9 @@
 var browser = require("webextension-polyfill");
 const CID = require('cids');
-// const IPFS = require('ipfs');
+const IPFS = require('ipfs');
 const memoize = require('fast-memoize');
+
+let ipfs = null;
 
 console.log("Loading dweb-proxy");
 
@@ -48,9 +50,37 @@ let getProxyAddress = async () => {
   return ipfs_source;
 };
 
-let gatewayFromIPFS = url => {
+let analyzeIpfsUrl = url => {
   const [cidv1, path] = url.match("([a-z0-9]+)\.ipfs(\/?.+)").slice(1);
-  return `https://ipfs.io/ipfs/${cidv1}${path}`;
+  return { cidv1, path };
+};
+
+const stems = [
+  "https://ipfs.io/ipfs/",
+];
+
+let fetchIPFS = async url => {
+  let { cidv1, path } = analyzeIpfsUrl(url);
+  for (let stem of stems) {
+    let response = await fetch(stem + cidv1 + path);
+    if (response.status === 200) {
+      return response;
+    }
+  }
+  return null;
+//  return `https://gw.ipfspin.com/ipfs/${cidv1}${path}`;
+};
+
+let fetchP2P = async url => {
+  let { cidv1, path } = analyzeIpfsUrl(url);
+  console.log(cidv1 + path);
+  let result = ipfs.cat(cidV0fromString(cidv1) + path);
+  console.log(result);
+  for await (let chunk of result) {
+    console.log("chunk!!!", result);
+  }
+  result = ipfs.cat(cidv1 + path);
+  return result;
 }
 
 let responsePromiseMap = new Map();
@@ -72,39 +102,44 @@ let setupProxying = async () => {
       }
       return proxyInfo;
     }, {urls: ["http://*/*"]});
-    browser.webRequest.onBeforeRequest.addListener(
+    browser.webRequest.onBeforeSendHeaders.addListener(
       async details => {
         console.log("about to filter", details.url);
-        let responsePromise = fetch(gatewayFromIPFS(details.url));
-        let response = await responsePromise;
+        console.log("request headers", details.requestHeaders);
+//        let responsePromise = fetchIPFS(details.url);
+        let fileGenerator = await fetchP2P(details.url);
+//        let response = await responsePromise;
 //        console.log([...response.headers.entries()]);
 //        console.log("fetch received content type:", response.headers.get("content-type"));
-        responsePromiseMap.set(details.requestId, responsePromise);
+        responsePromiseMap.set(details.requestId, /*responsePromise*/ fileGenerator);
         let filter = browser.webRequest.filterResponseData(details.requestId);
         filter.onstart = async () => {
-          let response = await responsePromise;
-          let reader = response.body.getReader();
-          while (true) {
-            let { value, done } = await reader.read();
-            if (done) {
-              break;
-            }
-            //console.log("read value", value);
-            filter.write(value);
+          for await (let chunk of fileGenerator) {
+            filter.write(chunk);
           }
+  //        let response = await responsePromise;
+  //        let reader = response.body.getReader();
+  //        while (true) {
+  //          let { value, done } = await reader.read();
+  //          if (done) {
+  //            break;
+  //          }
+  //          //console.log("read value", value);
+  //          filter.write(value);
+  //        }
           filter.close();
         }
       },
       {"urls": ["http://*.ipfs/*", "http://*.ipns/*", "http://*.eth/*"]},
-      ["blocking"]);
+      ["blocking", "requestHeaders"]);
     browser.webRequest.onHeadersReceived.addListener(
       async (details) => {
         console.log("onHeadersReceived", details);
-        let response = await responsePromiseMap.get(details.requestId);
-        let contentType = response.headers.get("content-type");
-        console.log("attempting to push", contentType);
+      //  let response = await responsePromiseMap.get(details.requestId);
+      //  let contentType = response.headers.get("content-type");
+    //    console.log("attempting to push", contentType);
         details.responseHeaders.push(
-          {name: "content-type", value: contentType},
+          {name: "content-type", value: "text/html" }, //contentType},
         );
         details.responseHeaders.push(
           {name: "Cache-Control", value: "public, max-age=31536000, immutable"}
@@ -153,12 +188,19 @@ let setupSearchRedirects = () => {
 // Convert a CID string to a CID V1 string.
 let cidV1fromString = (cidString) => new CID(cidString).toV1().toString();
 
+let cidV0fromString = (cidString) => new CID(cidString).toV0().toString();
+
 // Ensure the URLs in other formats that point to IPFS content are redirected
 // to http://{cid}.ipfs/..., such as:
 // http[s]://gateway.domain/ipfs/{cidv[0|1}/subpath
 let setupIPFSRedirects = () => {
   console.log("setupIPFSRedirects()");
   browser.webRequest.onBeforeRequest.addListener((request) => {
+    console.log("---", request.tabId);
+    if (request.tabId < 0) {
+      return { cancel: false };
+    }
+    console.log("onBeforeRequeust: ", request);
     let url = new URL(request.url);
     console.log(request.url);
     let cid = url.pathname.match(/\/ipfs\/(Qm[a-zA-Z0-9]{44}|[a-z0-9]+)/)[1];
@@ -167,7 +209,10 @@ let setupIPFSRedirects = () => {
     console.log("cidV1:", cidV1);
     let subpath = url.pathname.split(cid)[1];
     return { redirectUrl: `http://${cidV1}.ipfs${subpath}` };
-  }, {"urls": ["https://*/ipfs/*", "http://*/ipfs/*"]}, ["blocking"]);
+  }, {"urls": [
+    //"https://*/ipfs/*",
+    "http://*/ipfs/*"
+  ]}, ["blocking"]);
 };
 
 const example_links_page_url = "http://bafybeienxobqj6qjqf4ga77qeohxzjhfotbjefdognpx4ah5iysnnlhega.ipfs/";
@@ -175,26 +220,28 @@ let showExampleLinks = async () => {
   await browser.tabs.create({url: example_links_page_url});
 }
 
-/*
 // Trying out p2p loading using the IPFS library.
-let test_p2p = async () => {
-  const ipfs = await IPFS.create();
-  const file = ipfs.cat("QmPChd2hVbrJ6bfo3WBcTW4iZnpHm8TEzWkLHmLpXhF68A");
-  console.log(typeof file);
+let setup_p2p = async () => {
+  ipfs = await IPFS.create();
+  console.log("ipfs ready: ", ipfs);
+/*
+  const file = ipfs.cat("QmcvyefkqQX3PpjpY5L8B2yMd47XrVwAipr6cxUt2zvYU8/The.Big.Lebowski.mp4");
+console.log(typeof file);
   console.log(file);
   let i = 0;
-  for (let chunk of file) {
+  for await (let chunk of file) {
     console.log(chunk);
   };
+*/
   console.log("ipfs node ready!");
 };
-*/
 
 // Things we must do on startup or first installation
 let init = async () => {
   await setupProxying();
   setupSearchRedirects();
-//  setupIPFSRedirects();
+  setupIPFSRedirects();
+  setup_p2p();
   browser.runtime.onMessage.addListener(async (data) => {
     if (data === "show_example_links") {
       await showExampleLinks();
@@ -203,6 +250,18 @@ let init = async () => {
   // Connecting to https://arthuredelstein.net ahead of time
   // to make sure we don't see certificate errors in Firefox.
   await fetch("https://arthuredelstein.net");
+  // test wss
+  let ws = new WebSocket("ws://electrumx1.nmc.bitclc.net:50003");
+  ws.onmessage = (msg) => console.log("msg:", msg.data);
+  // console.log(ws);
+  ws.onopen = () => {
+    console.log("socket open");
+    try {
+      ws.send("hi ");
+    } catch (e) {
+      console.log(e);
+    }
+  }
   console.log("init complete");
 };
 
